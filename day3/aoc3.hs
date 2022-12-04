@@ -2,12 +2,21 @@ import System.Environment
 import Data.Char
 
 compartments :: String -> (String, String)
-compartments runsack = 
-    splitAt (div (length runsack) 2) runsack
+compartments rucksack = 
+    splitAt (div (length rucksack) 2) rucksack
 
-itemInBoth :: (String, String) -> Char
-itemInBoth (compA, compB) = 
-    head $ head $ filter (\x -> (length x /= 0)) $ (map (\a -> (filter (\b -> a==b) compB)) compA)
+commonItems :: (String, String) -> String
+commonItems (a,b) = filter (\x -> elem x a) b
+
+commonItemsSeveral :: [String] -> String
+commonItemsSeveral [] = ""
+commonItemsSeveral [x] = x
+commonItemsSeveral [x,y] = commonItems (x, y)
+commonItemsSeveral (a:b:l) = commonItemsSeveral ((commonItems (a,b)) : l)
+
+take3by3 :: [String] -> [[String]]
+take3by3 [] = []
+take3by3 (a:b:c:l) = [a, b, c] : (take3by3 l)
 
 priority :: Char -> Int
 priority item = do
@@ -20,6 +29,7 @@ main = do
     args <- getArgs
     content <- readFile (args !! 0)
     let linesOfFile = lines content
-    putStrLn $ show $ sum (map (priority . itemInBoth . compartments) linesOfFile)
+    putStrLn $ show $ sum (map (priority . head . commonItems . compartments) linesOfFile)
+    putStrLn $ show $ sum (map (priority . head . commonItemsSeveral) (take3by3 linesOfFile))
 
 -- Guillaume DEREX
