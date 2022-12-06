@@ -25,23 +25,30 @@ topCrates w = map (head) w
 -- probably a bit clumsy
 -- use vectors?
 -- applies an instruction to manipulate the crates with the crane
-useCrane :: Instruction -> Warehouse -> Warehouse
-useCrane (0, _, _) w = w
-useCrane (count, from, to) w = do
-    --let next = (useCrane (count - 1, from, to) w)
-    let next = w
+useCrane9000 :: Warehouse -> Instruction -> Warehouse
+useCrane9000 w (0, _, _) = w
+useCrane9000 w (count, from, to) = do
+    let next = (useCrane9000 w (count - 1, from, to))
     let crate = head (next !! (from - 1))
     let putted = applyToNth to (putCrate crate) next
     let taken = applyToNth from (tail) putted
     taken
 
--- applies a list of instructions to the crane
-followInstructions :: [Instruction] -> Warehouse -> Warehouse
-followInstructions list w = foldr (useCrane) w list
+useCrane9001 :: Warehouse -> Instruction -> Warehouse
+useCrane9001 w (0, _, _) = w
+useCrane9001 w (count, from, to) = do
+    let crates = take count (w !! (from - 1))
+    let putted = applyToNth to (crates ++) w
+    let taken = applyToNth from (drop count) putted
+    taken
 
 -- applies a list of instructions to the crane
-detailInstructions :: [Instruction] -> Warehouse -> [Warehouse]
-detailInstructions list w = scanr (useCrane) w list
+followInstructions9000 :: [Instruction] -> Warehouse -> Warehouse
+followInstructions9000 list w = foldl (useCrane9000) w list
+
+-- applies a list of instructions to the crane
+followInstructions9001 :: [Instruction] -> Warehouse -> Warehouse
+followInstructions9001 list w = foldl (useCrane9001) w list
 
 -- adds a new crate line to the crates
 stackCrate :: [Crate] -> Warehouse -> Warehouse
@@ -58,12 +65,12 @@ parseWarehouse (piles, height) lines = do
     let initial = (replicate piles "")
     foldr (stackCrate) initial (map (parseCrateLine) (take height lines))
 
+-- Parse the file for instructions
 parseInstructions :: [String] -> [Instruction]
 parseInstructions lines = do
     let words_lines = map (splitOn " ") lines
     let good_word_lines = filter (\x -> length (x !! 0) == 4) $ filter (\x -> length x == 6) words_lines
     let start_with_m = filter (\x -> x !! 0 !! 0 == 'm') good_word_lines
-    
     map (\x -> (read (x !! 1), read (x !! 3), read (x !! 5))) start_with_m
 
 
@@ -73,9 +80,10 @@ main = do
     let linesOfFile = lines content
     let warehouse = parseWarehouse (9, 8) linesOfFile
     let instructions = parseInstructions linesOfFile
-    putStrLn $ show $ instructions
-    putStrLn $ show $ warehouse
-    putStrLn $ show $ detailInstructions instructions warehouse
+    --putStrLn $ show $ instructions
+    --putStrLn $ show $ warehouse
+    putStrLn $ show $ topCrates $ followInstructions9000 instructions warehouse
+    putStrLn $ show $ topCrates $ followInstructions9001 instructions warehouse
     
 
 -- Guillaume DEREX
