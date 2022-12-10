@@ -5,6 +5,12 @@ import Data.List.Split
 data Node = Dir String [Node] | File String Integer deriving Show
 data Line = CdDown String | CdUp | Ls | LsResult Node deriving Show
 
+freeSize :: Node -> Integer
+freeSize fs = 70000000 - (size fs)
+
+sizeToFree :: Node -> Integer
+sizeToFree fs = 30000000 - (freeSize fs)
+
 size :: Node -> Integer
 size (File _ filesize) = filesize
 size (Dir _ contents) = sum $ map (size) contents
@@ -16,10 +22,26 @@ sizeSelective (Dir name contents) =
     where s = size (Dir name contents)
 
 sizeSelectiveRecursive :: Node -> Integer
-sizeSelectiveRecursive (File _ filesize) = 0
+sizeSelectiveRecursive (File _ _) = 0
 sizeSelectiveRecursive (Dir name contents) = 
     (sum $ map (sizeSelectiveRecursive) contents) + 
     sizeSelective (Dir name contents)
+
+isDeleteCandidate :: Integer -> Node -> Bool
+isDeleteCandidate tofree (File _ _) = False
+isDeleteCandidate tofree (Dir name contents) = 
+    (size (Dir name contents)) >= tofree
+
+-- UGLYYY
+smallestDeletableDirSize :: Integer -> Node -> Integer
+smallestDeletableDirSize tofree (File _ _) = 99999999999999
+smallestDeletableDirSize tofree (Dir name []) = 99999999999999
+smallestDeletableDirSize tofree (Dir name contents) = 
+    let sub = map (smallestDeletableDirSize tofree) contents in
+        minimum (
+            if isDeleteCandidate tofree (Dir name contents)
+            then size (Dir name contents) : sub 
+            else sub)
 
 parseCommand :: String -> Line
 parseCommand line = 
@@ -77,3 +99,4 @@ main = do
     --putStrLn $ show result
     putStrLn $ show (size result)
     putStrLn $ show (sizeSelectiveRecursive result)
+    putStrLn $ show (smallestDeletableDirSize (sizeToFree result) result)
